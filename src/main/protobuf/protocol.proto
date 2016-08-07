@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package com.echo.gold;
+
+enum PayMethod{
+  PAY_METHOD_EMPTY = 0x00000000; // due to the bug of scalapbc, do not use EMPTY in your code
+  ONLINE = 0x00000001; //在线支付
+  COD = 0x00000002; //货到付款, cash on deliver
+}
+
+enum DeliverMethod{
+  DELIVER_METHOD_EMPTY = 0x00000000;
+  EXPRESS = 0x00000001; //快递
+  DTD = 0x00000002; //送货上门，door-to-door
+
+}
+
+message OrderRequest{
+  string user_id = 1;
+  string title = 2; //商品名字
+  string product_id = 3; //商品ID
+  int32 num = 4; //商品数量
+  PayMethod pay_method = 5; //支付模式
+  DeliverMethod deliver_method = 6; //送货模式
+  string recipients_name = 7; //收货人
+  string recipients_phone = 8; //电话
+  string recipients_address = 9; //地址
+  string recipients_postcode = 10; //邮编
+  string comment = 11; //备注
+  //repeated string coupon_id = 12;
+}
+
+message PayRequest{
+  string order_id = 1;
+}
+
+message NotifyRequest{
+  string order_id = 1;
+}
+
+message QueryOrderRequest{
+  string order_id = 1;
+}
+
+message DeliverRequest{
+  string order_id = 1;
+}
+
+message DeliverConfirmRequest{
+  string order_id = 1;
+}
+
+message RefundRequest{
+  string order_id = 1;
+}
+
+message RefundConfirmRequest{
+  string order_id = 1;
+}
+
+enum ResultCode{
+  SUCCESS = 0;
+
+  INTERNAL_SERVER_ERROR = 10000;
+
+  // message error
+  REQUEST_RESOURCE_NOT_FOUND = 10001;
+  METHOD_NOT_ALLOW = 10002;
+  MESSAGE_TYPE_ERROR = 10003;
+  INVALID_MESSAGE = 10004;
+
+  // order error
+
+}
+
+message ResponseHeader{
+  ResultCode result = 1;
+  string error_description = 2;
+}
+
+message OrderResponse{
+  ResponseHeader header = 1;
+  string order_id = 2;
+}
+
+message PayResponse{
+  ResponseHeader header = 1;
+}
+
+// The order service definition.
+service OrderService {
+  rpc Order (OrderRequest) returns (OrderResponse) {}
+  //rpc Pay (PayRequest) returns (PayResponse) {}
+}
+
