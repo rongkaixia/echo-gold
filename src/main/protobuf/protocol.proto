@@ -93,3 +93,22 @@ service OrderService {
   //rpc Pay (PayRequest) returns (PayResponse) {}
 }
 
+message OrderInfo{
+  string user_id = 1;
+  string title = 2; //商品名字
+  string product_id = 3; //商品ID
+  int32 num = 4; //商品数量
+  PayMethod pay_method = 5; //支付模式
+  DeliverMethod deliver_method = 6; //送货模式
+  string recipients_name = 7; //收货人
+  string recipients_phone = 8; //电话
+  string recipients_address = 9; //地址
+  string recipients_postcode = 10; //邮编
+  string comment = 11; //备注
+  //repeated string coupon_id = 12;
+  double price = 20; // 商品原始单价
+  double real_price = 21; // 商品实际单价，促销等情况
+  double discount = 22; // 折扣，值的是优惠多少钱，如-100.11，而不是多少折
+  double pay_amt = 23; // 应支付价格 = real_price * num
+  double real_pay_amt = 24; // 实际支付价格 = real_price * num + discount
+}
