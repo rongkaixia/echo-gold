@@ -19,8 +19,8 @@ object HelloWorldClient {
   def main(args: Array[String]): Unit = {
     val client = HelloWorldClient("localhost", 50051)
     try {
-      val user = args.headOption.getOrElse("world")
-      client.greet(user)
+      client.order()
+      client.pay()
     } finally {
       client.shutdown()
     }
@@ -37,8 +37,7 @@ class HelloWorldClient private(
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
   }
 
-  /** Say hello to server. */
-  def greet(name: String): Unit = {
+  def order(): Unit = {
     logger.info("Will try to send order request...")
     val request = OrderRequest().withUserId("12345")
                                 .withTitle("测试商品")
@@ -52,7 +51,20 @@ class HelloWorldClient private(
                                 .withRecipientsPostcode("518400")
     try {
       val response = blockingStub.order(request)
-      logger.info("Response: " + response)
+      logger.info("OrderResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def pay(): Unit = {
+    logger.info("Will try to send pay request...")
+    val request = PayRequest().withOrderId("123")
+    try {
+      val response = blockingStub.pay(request)
+      logger.info("PayResponse: " + response)
     }
     catch {
       case e: StatusRuntimeException =>

@@ -1,21 +1,23 @@
 package com.echo.gold
 
-import java.util.logging.Logger
-
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.async.Async.{async, await}
 
 import io.grpc.{Server, ServerBuilder}
-import scala.concurrent.{ExecutionContext, Future}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
-import com.echo.gold.protocol._
+import com.trueaccord.scalapb.json.JsonFormat
 
-import org.mongodb.scala.{MongoClient, 
-                          MongoDatabase,
-                          MongoClientSettings, 
-                          ServerAddress}
-import com.mongodb.connection._
+import org.mongodb.scala._
+import com.mongodb.connection.ClusterSettings
+import org.mongodb.scala.model.Projections._
+import org.bson.types.ObjectId
+
+import com.echo.gold.utils.LazyConfig
+import com.echo.gold.protocol._
+// import org.mongodb.scala.bson._
 
 /**
  * [[https://github.com/grpc/grpc-java/blob/v0.13.2/examples/src/main/java/io/grpc/examples/helloworld/OrderServer.java]]
@@ -36,10 +38,8 @@ class OrderServer(executionContext: ExecutionContext) extends LazyLogging{ self 
   System.setProperty("log4j.configuration", "log4j.xml");
 
   private def start(): Unit = {
-    // init mongodb
-    implicit val mongoClient: MongoClient = initMongo()
     server = ServerBuilder.forPort(OrderServer.port)
-                          .addService(OrderServiceGrpc.bindService(new OrderImpl, executionContext))
+                          .addService(OrderServiceGrpc.bindService(new OrderService, executionContext))
                           .build
                           .start
     logger.info("Server started, listening on " + OrderServer.port)
@@ -63,68 +63,4 @@ class OrderServer(executionContext: ExecutionContext) extends LazyLogging{ self 
       server.awaitTermination()
     }
   }
-
-  private def initMongo(): MongoClient = {
-    val host = cfg.getString("echo.gold.mongo.host")
-    val port = cfg.getInt("echo.gold.mongo.port")
-    logger.info(s"mongodb[host=${host}, port=${port}")
-    val clusterSettings: ClusterSettings = 
-      ClusterSettings.builder().hosts(List(new ServerAddress(host, port)).asJava).build()
-    val settings: MongoClientSettings = 
-      MongoClientSettings.builder().clusterSettings(clusterSettings).build()
-    MongoClient(settings)
-  }
-
-  private class OrderImpl()(implicit mongo: MongoClient) 
-    extends OrderServiceGrpc.OrderService with LazyLogging {
-
-    private def pricing(req: OrderRequest): OrderInfo = {
-      val price = 1000.00
-      val realPrice = 1000.00
-      val discount = 0.0
-      val payAmt = realPrice * req.num
-      val realPayAmt = payAmt + discount
-
-      OrderInfo(userId = req.userId,
-                title = req.title,
-                productId = req.productId,
-                num = req.num,
-                payMethod = req.payMethod,
-                deliverMethod = req.deliverMethod,
-                recipientsName = req.recipientsName,
-                recipientsPhone = req.recipientsPhone,
-                recipientsAddress = req.recipientsAddress,
-                recipientsPostcode = req.recipientsPostcode,
-                comment = req.comment,
-                price = price,
-                realPrice = realPrice,
-                discount = discount,
-                payAmt = payAmt,
-                realPayAmt = realPayAmt)
-    }
-
-    private def saveToMongo(): Unit = {
-      val database: MongoDatabase = mongo.getDatabase("mydb")
-      logger.debug(s"mongo database: ${database}")
-    }
-
-    override def order(req: OrderRequest) = {
-      logger.debug(s"recieve request: ${req}")
-      // check request
-      
-      // generate order id
-      val id = 
-      // pricing
-      val orderInfo = pricing(req)
-
-      // write to db
-      saveToMongo(orderInfo)
-
-      // send response
-      val header = ResponseHeader(ResultCode.SUCCESS, "")
-      val reply = OrderResponse().withHeader(header)
-      Future.successful(reply)
-    }
-  }
-
 }
