@@ -43,3 +43,4 @@ build.log
 *.swp
 .DS_Store
 
+src/main/compiled_protobuf/**/*
