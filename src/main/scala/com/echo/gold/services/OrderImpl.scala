@@ -11,13 +11,13 @@ import org.slf4j.LoggerFactory
 import com.trueaccord.scalapb.json.JsonFormat
 
 import org.mongodb.scala._
-import com.mongodb.connection.ClusterSettings
+import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._
+import org.mongodb.scala.model.Updates._
 import org.bson.types.ObjectId
 
 import com.echo.gold.utils.LazyConfig
 import com.echo.gold.protocol._
-// import org.mongodb.scala.bson._
 
 trait OrderImpl extends AbstractOrderService with LazyLogging{
 
@@ -31,7 +31,6 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
     OrderInfo(userId = req.userId,
               title = req.title,
               productId = req.productId,
-
               num = req.num,
               payMethod = req.payMethod,
               deliverMethod = req.deliverMethod,
@@ -44,7 +43,8 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
               realPrice = realPrice,
               discount = discount,
               payAmt = payAmt,
-              realPayAmt = realPayAmt)
+              realPayAmt = realPayAmt,
+              state = OrderState.UNPAY)
   }
 
   private def saveToMongo(orderInfo: OrderInfo): Unit = {
@@ -74,14 +74,13 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
     val id = new ObjectId
 
     // pricing
-    val orderInfo = pricing(req)
+    val orderInfo = pricing(req).withOrderId(id.toString)
 
     // write to db
-    orderInfo.withOrderId(id.toString)
     saveToMongo(orderInfo)
 
     // send response
-    val header = ResponseHeader(ResultCode.SUCCESS, "")
+    val header = ResponseHeader(ResultCode.SUCCESS, "ok")
     val reply = OrderResponse().withHeader(header).withOrderInfo(orderInfo)
     Future.successful(reply)
   }

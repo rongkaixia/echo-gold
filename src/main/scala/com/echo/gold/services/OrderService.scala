@@ -17,8 +17,12 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService {
 }
 
 class OrderService() 
-  extends OrderImpl 
-  with PayImpl{
+  extends QueryOrderImpl
+  with OrderImpl 
+  with PayImpl
+  with NotifyImpl
+  with DeliverImpl
+  with DeliverConfirmImpl{
 
   // execution context
   val ec = ExecutionContext.Implicits.global

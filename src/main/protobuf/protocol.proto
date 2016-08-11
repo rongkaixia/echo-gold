@@ -20,10 +20,11 @@ enum OrderState{
   UNPAY = 0x00000001;
   PAY_SUCCESS = 0x00000002;
   PAY_ERROR = 0x00000003;
-  DELIVER = 0x00000004; 
-  DELIVER_CONFIRM = 0x00000005;
-  REFUND = 0x00000006;
-  REFUND_CONFIRM = 0x00000007;
+  DELIVER = 0x00000004; // 发货中
+  DELIVER_CONFIRM = 0x00000005; // 确认收货，订单结束
+  REFUND = 0x00000006; // 退款，只有PAY_SUCESS后才能
+  REFUND_CONFIRM = 0x00000007; // 退款成功，订单结束
+  CANCELLED = 0x00000008; // 订单取消，只有订单状态为UNPAY的才能cancel
 }
 
 message OrderRequest{
@@ -93,6 +94,11 @@ message ResponseHeader{
   string error_description = 2;
 }
 
+message QueryOrderResponse{
+  ResponseHeader header = 1;
+  OrderInfo order_info = 2;
+}
+
 message OrderResponse{
   ResponseHeader header = 1;
   OrderInfo order_info = 2;
@@ -100,7 +106,18 @@ message OrderResponse{
 
 message PayResponse{
   ResponseHeader header = 1;
-  OrderInfo order_info = 2;
+}
+
+message NotifyResponse{
+  ResponseHeader header = 1;
+}
+
+message DeliverResponse{
+  ResponseHeader header = 1;
+}
+
+message DeliverConfirmResponse{
+  ResponseHeader header = 1;
 }
 
 message OrderInfo{
@@ -127,6 +144,10 @@ message OrderInfo{
 
 // The order service definition.
 service OrderService {
+  rpc queryOrder (QueryOrderRequest) returns (QueryOrderResponse) {}
   rpc Order (OrderRequest) returns (OrderResponse) {}
   rpc Pay (PayRequest) returns (PayResponse) {}
+  rpc Notify (NotifyRequest) returns (NotifyResponse) {}
+  rpc Deliver (DeliverRequest) returns (DeliverResponse) {}
+  rpc DeliverConfirm (DeliverConfirmRequest) returns (DeliverConfirmResponse) {}
 }
