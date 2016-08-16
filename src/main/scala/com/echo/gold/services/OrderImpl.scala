@@ -2,7 +2,7 @@ package com.echo.gold
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.async.Async.{async, await}
 
 import com.typesafe.config.{Config, ConfigFactory}
@@ -47,7 +47,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
               state = OrderState.UNPAY)
   }
 
-  private def saveToMongo(orderInfo: OrderInfo): Unit = {
+  private def saveToMongo(orderInfo: OrderInfo): Future[Unit] = {
     async{
       val dbName = cfg.getString("echo.gold.mongo.order.db")
       val collectionName = cfg.getString("echo.gold.mongo.order.collection")
@@ -66,22 +66,37 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
    * @type  req OrderRequest
    * @return OrderResponse
    */
-  override def order(req: OrderRequest) = {
-    logger.debug(s"recieve request: ${req}")
-    // check request
-    
-    // generate order id
-    val id = new ObjectId
+  override def order(req: OrderRequest): Future[OrderResponse] = {
+    val replyPromise = Promise[OrderResponse]()
+    logger.debug(s"recieve order request: ${req}")
+    val fut = async{
+      var res = OrderResponse()
+      // check request
+      
+      // generate order id
+      val id = new ObjectId
 
-    // pricing
-    val orderInfo = pricing(req).withOrderId(id.toString)
+      // pricing
+      val orderInfo = pricing(req).withOrderId(id.toString)
 
-    // write to db
-    saveToMongo(orderInfo)
+      // write to db
+      await(saveToMongo(orderInfo))
+
+      // response
+      val header = ResponseHeader(ResultCode.SUCCESS, "ok")
+      res = res.withHeader(header).withOrderInfo(orderInfo)
+      replyPromise success res
+    }
+
+    // exception, because await must not be used under a try/catch.
+    fut.onFailure {
+      case error: Throwable => 
+        logger.error(s"order error: ${error}")
+        val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
+        replyPromise success OrderResponse().withHeader(header)
+    }
 
     // send response
-    val header = ResponseHeader(ResultCode.SUCCESS, "ok")
-    val reply = OrderResponse().withHeader(header).withOrderInfo(orderInfo)
-    Future.successful(reply)
+    replyPromise.future
   }
 }

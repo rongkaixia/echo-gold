@@ -71,10 +71,13 @@ message RefundConfirmRequest{
 }
 
 enum ResultCode{
-  SUCCESS = 0;
+  RESULT_CODE_EMPTY = 0; // due to the bug of scalapbc, do not use EMPTY in your code
 
+  // success
+  SUCCESS = 1;
+
+  // internal error
   INTERNAL_SERVER_ERROR = 10000;
-
 
   // message error
   REQUEST_RESOURCE_NOT_FOUND = 10001;
@@ -86,7 +89,8 @@ enum ResultCode{
   INVALID_REQUEST_ARGUMENT = 20001;
 
   // order error
-
+  ORDER_NOT_EXISTED = 30001;
+  INVALID_ORDER_STATE = 30002;
 }
 
 message ResponseHeader{
@@ -147,7 +151,7 @@ service OrderService {
   rpc queryOrder (QueryOrderRequest) returns (QueryOrderResponse) {}
   rpc Order (OrderRequest) returns (OrderResponse) {}
   rpc Pay (PayRequest) returns (PayResponse) {}
-  rpc Notify (NotifyRequest) returns (NotifyResponse) {}
+  //rpc Notify (NotifyRequest) returns (NotifyResponse) {}
   rpc Deliver (DeliverRequest) returns (DeliverResponse) {}
   rpc DeliverConfirm (DeliverConfirmRequest) returns (DeliverConfirmResponse) {}
 }

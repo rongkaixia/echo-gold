@@ -33,6 +33,7 @@ class HelloWorldClient private(
 ) {
   private[this] val logger = Logger.getLogger(classOf[HelloWorldClient].getName)
 
+  var orderInfo: OrderInfo = null
   def shutdown(): Unit = {
     channel.shutdown.awaitTermination(5, TimeUnit.SECONDS)
   }
@@ -51,6 +52,7 @@ class HelloWorldClient private(
                                 .withRecipientsPostcode("518400")
     try {
       val response = blockingStub.order(request)
+      orderInfo = response.orderInfo.get
       logger.info("OrderResponse: " + response)
     }
     catch {
@@ -61,7 +63,7 @@ class HelloWorldClient private(
 
   def pay(): Unit = {
     logger.info("Will try to send pay request...")
-    val request = PayRequest().withOrderId("123")
+    val request = PayRequest().withOrderId(orderInfo.orderId)
     try {
       val response = blockingStub.pay(request)
       logger.info("PayResponse: " + response)
@@ -71,4 +73,18 @@ class HelloWorldClient private(
         logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
     }
   }
+
+  def queryOrderInfo(): Unit = {
+    logger.info("Will try to send queryOrderInfo request...")
+    val request = QueryOrderRequest().withOrderId(orderInfo.orderId)
+    try {
+      val response = blockingStub.queryOrder(request)
+      logger.info("QueryOrderResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
 }

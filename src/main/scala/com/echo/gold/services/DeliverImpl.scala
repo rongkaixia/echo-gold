@@ -2,7 +2,7 @@ package com.echo.gold
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.async.Async.{async, await}
 
 import com.typesafe.config.{Config, ConfigFactory}
@@ -21,20 +21,30 @@ import com.echo.gold.protocol._
 
 trait DeliverImpl extends AbstractOrderService with LazyLogging{
   /**
-   * pay interface
+   * deliver interface
    *
    * @param  DeliverRequest
    * @return DeliverResponse
    */
   override def deliver(req: DeliverRequest): Future[DeliverResponse] = {
-    logger.debug(s"recieve pay request: ${req}")
-    // check request
-    
-    // pay
-    
-    // send response
-    val header = ResponseHeader(ResultCode.SUCCESS, "ok")
-    val reply = DeliverResponse().withHeader(header)
-    Future.successful(reply)
+    async{
+      var reply = DeliverResponse()
+      logger.debug(s"recieve deliver request: ${req}")
+      // check request
+      
+      // change state
+      val ret = await(changeState(req.orderId, OrderState.PAY_SUCCESS, OrderState.DELIVER))
+      if (!ret) { 
+        val currentState = queryState(req.orderId)
+        logger.error(s"cannot change order state from ${currentState} to ${OrderState.DELIVER.toString}" +
+                     ", order state MUST BE PAY_SUCCESS for deliver method.")
+        val header = ResponseHeader(ResultCode.INVALID_ORDER_STATE, "invalid order state")
+        reply = reply.withHeader(header)
+      }else{
+        val header = ResponseHeader(ResultCode.SUCCESS, "ok")
+        reply = reply.withHeader(header)
+      }
+      reply
+    }
   }
 }
