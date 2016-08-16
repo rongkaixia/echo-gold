@@ -27,24 +27,43 @@ trait DeliverImpl extends AbstractOrderService with LazyLogging{
    * @return DeliverResponse
    */
   override def deliver(req: DeliverRequest): Future[DeliverResponse] = {
-    async{
-      var reply = DeliverResponse()
-      logger.debug(s"recieve deliver request: ${req}")
+    var replyPromise = Promise[DeliverResponse]()
+    logger.debug(s"recieve deliver request: ${req}")
+    val fut = async{
+      var res = DeliverResponse()
       // check request
       
+      // deliver
+      
       // change state
+      val currentState = await(queryState(req.orderId))
       val ret = await(changeState(req.orderId, OrderState.PAY_SUCCESS, OrderState.DELIVER))
       if (!ret) { 
-        val currentState = queryState(req.orderId)
         logger.error(s"cannot change order state from ${currentState} to ${OrderState.DELIVER.toString}" +
                      ", order state MUST BE PAY_SUCCESS for deliver method.")
         val header = ResponseHeader(ResultCode.INVALID_ORDER_STATE, "invalid order state")
-        reply = reply.withHeader(header)
+        res = res.withHeader(header)
       }else{
         val header = ResponseHeader(ResultCode.SUCCESS, "ok")
-        reply = reply.withHeader(header)
+        res = res.withHeader(header)
       }
-      reply
+      // response
+      replyPromise success res
     }
+
+    // exception, because await must not be used under a try/catch.
+    fut.onFailure {
+      case x: OrderServiceException.OrderNotExist =>
+        logger.debug(x.toString)
+        val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
+        replyPromise success DeliverResponse().withHeader(header)
+      case error: Throwable => 
+        logger.error(s"pay error: ${error}")
+        val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
+        replyPromise success DeliverResponse().withHeader(header)
+    }
+
+    // send response
+    replyPromise.future
   }
 }

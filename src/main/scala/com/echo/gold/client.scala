@@ -21,6 +21,11 @@ object HelloWorldClient {
     try {
       client.order()
       client.pay()
+      client.queryOrderInfo()
+      client.deliver()
+      client.queryOrderInfo()
+      client.deliverConfirm()
+      client.queryOrderInfo()
     } finally {
       client.shutdown()
     }
@@ -80,6 +85,32 @@ class HelloWorldClient private(
     try {
       val response = blockingStub.queryOrder(request)
       logger.info("QueryOrderResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def deliver(): Unit = {
+    logger.info("Will try to send deliver request...")
+    val request = DeliverRequest().withOrderId(orderInfo.orderId)
+    try {
+      val response = blockingStub.deliver(request)
+      logger.info("DeliverResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def deliverConfirm(): Unit = {
+    logger.info("Will try to send deliverConfirm request...")
+    val request = DeliverConfirmRequest().withOrderId(orderInfo.orderId)
+    try {
+      val response = blockingStub.deliverConfirm(request)
+      logger.info("DeliverConfirmResponse: " + response)
     }
     catch {
       case e: StatusRuntimeException =>

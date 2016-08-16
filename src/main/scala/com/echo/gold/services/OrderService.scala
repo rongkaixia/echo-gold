@@ -51,6 +51,7 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
         logger.debug(s"queryOrderInfo error: order not exist for orderId[${orderId}]")
         throw new OrderServiceException.OrderNotExist(orderId)
       }
+      logger.debug(s"orderInfo: ${result.head}")
       JsonFormat.fromJsonString[OrderInfo](result.head.toJson)
     }
   }
@@ -76,7 +77,14 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
         throw new RuntimeException(s"queryState error: order state not exist for orderId[${orderId}]")
       }
       result.head.get(stateColumn).get.asString.getValue match {
+        case v if v == OrderState.UNPAY.toString => OrderState.UNPAY
+        case v if v == OrderState.PAY_SUCCESS.toString => OrderState.PAY_SUCCESS
         case v if v == OrderState.PAY_ERROR.toString => OrderState.PAY_ERROR
+        case v if v == OrderState.DELIVER.toString => OrderState.DELIVER
+        case v if v == OrderState.DELIVER_CONFIRM.toString => OrderState.DELIVER_CONFIRM
+        case v if v == OrderState.REFUND.toString => OrderState.REFUND
+        case v if v == OrderState.REFUND_CONFIRM.toString => OrderState.REFUND_CONFIRM
+        case v if v == OrderState.CANCELLED.toString => OrderState.CANCELLED
       }
     }
   }

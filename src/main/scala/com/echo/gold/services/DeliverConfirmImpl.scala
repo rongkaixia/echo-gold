@@ -27,24 +27,43 @@ trait DeliverConfirmImpl extends AbstractOrderService with LazyLogging{
    * @return DeliverConfirmResponse
    */
   override def deliverConfirm(req: DeliverConfirmRequest): Future[DeliverConfirmResponse] = {
-    async{
-      var reply = DeliverConfirmResponse()
-      logger.debug(s"recieve deliverConfirm request: ${req}")
+    var replyPromise = Promise[DeliverConfirmResponse]()
+    logger.debug(s"recieve deliverConfirm request: ${req}")
+    val fut = async{
+      var res = DeliverConfirmResponse()
       // check request
       
+      // deliver
+      
       // change state
+      val currentState = await(queryState(req.orderId))
       val ret = await(changeState(req.orderId, OrderState.DELIVER, OrderState.DELIVER_CONFIRM))
       if (!ret) { 
-        val currentState = queryState(req.orderId)
         logger.error(s"cannot change order state from ${currentState} to ${OrderState.DELIVER_CONFIRM.toString}" +
-                     ", order state MUST BE DELIVER_CONFIRM for deliverConfirm method.")
+                     ", order state MUST BE DELIVER for deliverConfirm method.")
         val header = ResponseHeader(ResultCode.INVALID_ORDER_STATE, "invalid order state")
-        reply = reply.withHeader(header)
+        res = res.withHeader(header)
       }else{
         val header = ResponseHeader(ResultCode.SUCCESS, "ok")
-        reply = reply.withHeader(header)
+        res = res.withHeader(header)
       }
-      reply
+      // response
+      replyPromise success res
     }
+
+    // exception, because await must not be used under a try/catch.
+    fut.onFailure {
+      case x: OrderServiceException.OrderNotExist =>
+        logger.debug(x.toString)
+        val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
+        replyPromise success DeliverConfirmResponse().withHeader(header)
+      case error: Throwable => 
+        logger.error(s"pay error: ${error}")
+        val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
+        replyPromise success DeliverConfirmResponse().withHeader(header)
+    }
+
+    // send response
+    replyPromise.future  
   }
 }
