@@ -20,7 +20,7 @@ object HelloWorldClient {
     val client = HelloWorldClient("localhost", 50051)
     try {
       client.order()
-      client.pay()
+      client.notifyy()
       client.queryOrderInfo()
       client.deliver()
       client.queryOrderInfo()
@@ -66,12 +66,12 @@ class HelloWorldClient private(
     }
   }
 
-  def pay(): Unit = {
-    logger.info("Will try to send pay request...")
-    val request = PayRequest().withOrderId(orderInfo.orderId)
+  def notifyy(): Unit = {
+    logger.info("Will try to send notify request...")
+    val request = NotifyRequest().withOrderId(orderInfo.orderId)
     try {
-      val response = blockingStub.pay(request)
-      logger.info("PayResponse: " + response)
+      val response = blockingStub.notify(request)
+      logger.info("NotifyResponse: " + response)
     }
     catch {
       case e: StatusRuntimeException =>

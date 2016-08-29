@@ -19,21 +19,21 @@ import org.bson.types.ObjectId
 import com.echo.gold.utils.LazyConfig
 import com.echo.gold.protocol._
 
-trait PayImpl extends AbstractOrderService with LazyLogging{
+trait NotifyImpl extends AbstractOrderService with LazyLogging{
   /**
-   * pay interface
+   * notify interface
    *
    * @type  req PayRequest
-   * @return PayResponse
+   * @return NotifyResponse
    */
-  override def pay(req: PayRequest): Future[PayResponse] = {
-    var replyPromise = Promise[PayResponse]()
-    logger.debug(s"recieve pay request: ${req}")
+  override def notify(req: NotifyRequest): Future[NotifyResponse] = {
+    var replyPromise = Promise[NotifyResponse]()
+    logger.debug(s"recieve notify request: ${req}")
     val fut = async{
-      var res = PayResponse()
+      var res = NotifyResponse()
       // check request
       
-      // pay
+      // validate notify request
       
       // change state
       val currentState = await(queryState(req.orderId))
@@ -56,11 +56,11 @@ trait PayImpl extends AbstractOrderService with LazyLogging{
       case x: OrderServiceException.OrderNotExist =>
         logger.debug(x.toString)
         val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
-        replyPromise success PayResponse().withHeader(header)
+        replyPromise success NotifyResponse().withHeader(header)
       case error: Throwable => 
         logger.error(s"pay error: ${error}")
         val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
-        replyPromise success PayResponse().withHeader(header)
+        replyPromise success NotifyResponse().withHeader(header)
     }
 
     // send response

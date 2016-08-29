@@ -95,7 +95,7 @@ enum ResultCode{
 
 message ResponseHeader{
   ResultCode result = 1;
-  string error_description = 2;
+  string result_description = 2;
 }
 
 message QueryOrderResponse{
@@ -150,8 +150,8 @@ message OrderInfo{
 service OrderService {
   rpc queryOrder (QueryOrderRequest) returns (QueryOrderResponse) {}
   rpc Order (OrderRequest) returns (OrderResponse) {}
-  rpc Pay (PayRequest) returns (PayResponse) {}
-  //rpc Notify (NotifyRequest) returns (NotifyResponse) {}
+  // rpc Pay (PayRequest) returns (PayResponse) {}
+  rpc Notify (NotifyRequest) returns (NotifyResponse) {}
   rpc Deliver (DeliverRequest) returns (DeliverResponse) {}
   rpc DeliverConfirm (DeliverConfirmRequest) returns (DeliverConfirmResponse) {}
 }
