@@ -16,7 +16,7 @@ import org.mongodb.scala.model.Projections._
 import org.bson.types.ObjectId
 
 import com.echo.gold.utils.LazyConfig
-import com.echo.gold.protocol._
+import com.echo.protocol.gold._
 // import org.mongodb.scala.bson._
 
 /**

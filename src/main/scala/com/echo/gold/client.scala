@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 import java.util.logging.{Level, Logger}
 
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
-import com.echo.gold.protocol._
+import com.echo.protocol.gold._
 
 /**
  * [[https://github.com/grpc/grpc-java/blob/v0.13.2/examples/src/main/java/io/grpc/examples/helloworld/HelloWorldClient.java]]

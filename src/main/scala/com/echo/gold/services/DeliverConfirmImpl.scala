@@ -17,7 +17,7 @@ import org.mongodb.scala.model.Updates._
 import org.bson.types.ObjectId
 
 import com.echo.gold.utils.LazyConfig
-import com.echo.gold.protocol._
+import com.echo.protocol.gold._
 
 trait DeliverConfirmImpl extends AbstractOrderService with LazyLogging{
   /**
@@ -41,10 +41,10 @@ trait DeliverConfirmImpl extends AbstractOrderService with LazyLogging{
       if (!ret) { 
         logger.error(s"cannot change order state from ${currentState} to ${OrderState.DELIVER_CONFIRM.toString}" +
                      ", order state MUST BE DELIVER for deliverConfirm method.")
-        val header = ResponseHeader(ResultCode.INVALID_ORDER_STATE, "invalid order state")
+        val header = common.ResponseHeader(common.ResultCode.INVALID_ORDER_STATE, "invalid order state")
         res = res.withHeader(header)
       }else{
-        val header = ResponseHeader(ResultCode.SUCCESS, "ok")
+        val header = common.ResponseHeader(common.ResultCode.SUCCESS, "ok")
         res = res.withHeader(header)
       }
       // response
@@ -55,11 +55,11 @@ trait DeliverConfirmImpl extends AbstractOrderService with LazyLogging{
     fut.onFailure {
       case x: OrderServiceException.OrderNotExist =>
         logger.debug(x.toString)
-        val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
+        val header = common.ResponseHeader(common.ResultCode.ORDER_NOT_EXISTED, x.toString)
         replyPromise success DeliverConfirmResponse().withHeader(header)
       case error: Throwable => 
         logger.error(s"pay error: ${error}")
-        val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
+        val header = common.ResponseHeader(common.ResultCode.INTERNAL_SERVER_ERROR, error.toString)
         replyPromise success DeliverConfirmResponse().withHeader(header)
     }
 

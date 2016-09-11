@@ -1,0 +1,3 @@
+[submodule "lib/echo-common"]
+	path = lib/echo-common
+	url = git@github.com:rongkaixia/echo-common.git

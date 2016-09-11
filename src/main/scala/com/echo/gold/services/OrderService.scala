@@ -14,7 +14,7 @@ import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Projections._
 import org.mongodb.scala.model.Updates._
 import com.mongodb.connection.ClusterSettings
-import com.echo.gold.protocol._
+import com.echo.protocol.gold._
 
 class OrderServiceException(message: String = null, cause: Throwable = null) extends
   RuntimeException(OrderServiceException.defaultMessage(message, cause), cause)
