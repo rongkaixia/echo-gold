@@ -18,6 +18,7 @@ import org.bson.types.ObjectId
 
 import com.echo.gold.utils.LazyConfig
 import com.echo.protocol.gold._
+import com.echo.protocol.common._
 
 trait NotifyImpl extends AbstractOrderService with LazyLogging{
   /**
@@ -41,10 +42,10 @@ trait NotifyImpl extends AbstractOrderService with LazyLogging{
       if (!ret) { 
         logger.error(s"cannot change order state from ${currentState} to ${OrderState.PAY_SUCCESS.toString}" +
                      ", order state MUST BE UNPAY for pay method.")
-        val header = common.ResponseHeader(common.ResultCode.INVALID_ORDER_STATE, "invalid order state")
+        val header = ResponseHeader(ResultCode.INVALID_ORDER_STATE, "invalid order state")
         res = res.withHeader(header)
       }else{
-        val header = common.ResponseHeader(common.ResultCode.SUCCESS, "ok")
+        val header = ResponseHeader(ResultCode.SUCCESS, "ok")
         res = res.withHeader(header)
       }
       // response
@@ -55,11 +56,11 @@ trait NotifyImpl extends AbstractOrderService with LazyLogging{
     fut.onFailure {
       case x: OrderServiceException.OrderNotExist =>
         logger.debug(x.toString)
-        val header = common.ResponseHeader(common.ResultCode.ORDER_NOT_EXISTED, x.toString)
+        val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
         replyPromise success NotifyResponse().withHeader(header)
       case error: Throwable => 
         logger.error(s"pay error: ${error}")
-        val header = common.ResponseHeader(common.ResultCode.INTERNAL_SERVER_ERROR, error.toString)
+        val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
         replyPromise success NotifyResponse().withHeader(header)
     }
 

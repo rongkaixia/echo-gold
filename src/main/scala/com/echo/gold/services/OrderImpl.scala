@@ -18,6 +18,7 @@ import org.bson.types.ObjectId
 
 import com.echo.gold.utils.LazyConfig
 import com.echo.protocol.gold._
+import com.echo.protocol.common._
 
 trait OrderImpl extends AbstractOrderService with LazyLogging{
 
@@ -83,7 +84,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       await(saveToMongo(orderInfo))
 
       // response
-      val header = common.ResponseHeader(common.ResultCode.SUCCESS, "ok")
+      val header = ResponseHeader(ResultCode.SUCCESS, "ok")
       res = res.withHeader(header).withOrderInfo(orderInfo)
       replyPromise success res
     }
@@ -92,7 +93,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
     fut.onFailure {
       case error: Throwable => 
         logger.error(s"order error: ${error}")
-        val header = common.ResponseHeader(common.ResultCode.INTERNAL_SERVER_ERROR, error.toString)
+        val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
         replyPromise success OrderResponse().withHeader(header)
     }
 
