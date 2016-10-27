@@ -26,6 +26,8 @@ object HelloWorldClient {
       client.queryOrderInfo()
       client.deliverConfirm()
       client.queryOrderInfo()
+
+      client.queryOrderInfoWithUser()
     } finally {
       client.shutdown()
     }
@@ -85,6 +87,19 @@ class HelloWorldClient private(
     try {
       val response = blockingStub.queryOrder(request)
       logger.info("QueryOrderResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def queryOrderInfoWithUser(): Unit = {
+    logger.info("Will try to send queryOrderInfoWithUser request...")
+    val request = QueryOrderWithUserRequest().withUserId(orderInfo.userId)
+    try {
+      val response = blockingStub.queryOrderWithUser(request)
+      logger.info("QueryOrderWithUserResponse: " + response)
     }
     catch {
       case e: StatusRuntimeException =>

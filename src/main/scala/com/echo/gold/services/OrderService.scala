@@ -114,6 +114,7 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
 
 class OrderService() 
   extends QueryOrderImpl
+  with QueryOrderWithUserImpl
   with OrderImpl 
   with NotifyImpl
   with DeliverImpl
