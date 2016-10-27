@@ -20,32 +20,74 @@ import com.echo.gold.utils.LazyConfig
 import com.echo.protocol.gold._
 import com.echo.protocol.common._
 
+// TODO: 切换到统一批价服务器比较好，现在的架构前端跟后端的批价是分开的
 trait OrderImpl extends AbstractOrderService with LazyLogging{
 
-  private def pricing(req: OrderRequest): OrderInfo = {
-    val price = 1000.00
-    val realPrice = 1000.00
-    val discount = 0.0
-    val payAmt = realPrice * req.num
-    val realPayAmt = payAmt + discount
+  // 因为mongoose的bug，不能20.00被当成Int保存了
+  private def _toDouble(n: bson.BsonValue): Double = {
+    if (n.isInt32) {
+      n.asInt32.getValue.toDouble
+    } else if (n.isInt64) {
+      n.asInt64.getValue.toDouble
+    } else if (n.isDouble) {
+      n.asDouble.getValue
+    } else {
+      throw new RuntimeException(s"cannot convert ${n} to double")
+    }
+  }
 
-    OrderInfo(userId = req.userId,
-              title = req.title,
-              productId = req.productId,
-              num = req.num,
-              payMethod = req.payMethod,
-              deliverMethod = req.deliverMethod,
-              recipientsName = req.recipientsName,
-              recipientsPhone = req.recipientsPhone,
-              recipientsAddress = req.recipientsAddress,
-              recipientsPostcode = req.recipientsPostcode,
-              comment = req.comment,
-              price = price,
-              realPrice = realPrice,
-              discount = discount,
-              payAmt = payAmt,
-              realPayAmt = realPayAmt,
-              state = OrderState.UNPAY)
+  private def pricing(req: OrderRequest): Future[OrderInfo] = {
+    async {
+      val dbName = cfg.getString("echo.gold.mongo.product.db")
+      val collectionName = cfg.getString("echo.gold.mongo.product.collection")
+      val productIdColumn = cfg.getString("echo.gold.mongo.product.columns.product_id")
+      val priceColumn = cfg.getString("echo.gold.mongo.product.columns.price")
+      val realPriceColumn = cfg.getString("echo.gold.mongo.product.columns.real_price")
+      logger.debug(s"mongo database = ${dbName}, collection = ${collectionName}")
+      val database: MongoDatabase = mongo.getDatabase(dbName)
+      val collection = database.getCollection(collectionName)
+
+      val filterOp = equal(productIdColumn, new ObjectId(req.productId))
+      val result = await(collection.find(filterOp).first().toFuture)
+      if (result.size != 1) {
+        logger.debug(s"pricing error: product not exist for productId[${req.productId}]")
+        throw new RuntimeException(s"pricing error: product not exist for productId[${req.productId}]")
+      }
+      if (!result.head.get(priceColumn).isDefined) {
+        logger.error(s"pricing error: priceColumn[${priceColumn}] not exists")
+        throw new RuntimeException(s"pricing error: priceColumn[${priceColumn}] not exists")
+      }
+      if (!result.head.get(realPriceColumn).isDefined) {
+        logger.error(s"pricing error: realPriceColumn[${realPriceColumn}] not exists")
+        throw new RuntimeException(s"pricing error: realPriceColumn[${realPriceColumn}] not exists")
+      }
+
+      val price = _toDouble(result.head.get(priceColumn).get)
+      val realPrice = _toDouble(result.head.get(priceColumn).get)
+      val discount = 0.0
+      val payAmt = realPrice * req.num
+      val realPayAmt = payAmt + discount
+      logger.debug(s"pricing result: price=${price}, realPrice=${realPrice}, discount=${discount}" + 
+                s", payAmt =${payAmt}, realPayAmt=${realPayAmt}")
+
+      OrderInfo(userId = req.userId,
+                title = req.title,
+                productId = req.productId,
+                num = req.num,
+                payMethod = req.payMethod,
+                deliverMethod = req.deliverMethod,
+                recipientsName = req.recipientsName,
+                recipientsPhone = req.recipientsPhone,
+                recipientsAddress = req.recipientsAddress,
+                recipientsPostcode = req.recipientsPostcode,
+                comment = req.comment,
+                price = price,
+                realPrice = realPrice,
+                discount = discount,
+                payAmt = payAmt,
+                realPayAmt = realPayAmt,
+                state = OrderState.UNPAY)
+    }
   }
 
   private def saveToMongo(orderInfo: OrderInfo): Future[Unit] = {
@@ -78,7 +120,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       val id = new ObjectId
 
       // pricing
-      val orderInfo = pricing(req).withOrderId(id.toString)
+      val orderInfo = await(pricing(req)).withOrderId(id.toString)
 
       // write to db
       await(saveToMongo(orderInfo))

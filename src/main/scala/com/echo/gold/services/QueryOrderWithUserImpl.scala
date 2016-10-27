@@ -35,11 +35,12 @@ trait QueryOrderWithUserImpl extends AbstractOrderService with LazyLogging{
       val projectionOp = exclude("_id")
       val result = await(collection.find(filterOp).projection(projectionOp).toFuture)
       if (result.size < 1) {
-        logger.debug(s"queryOrderInfo error: order not exist for userId[${userId}]")
-        throw new OrderServiceException.OrderNotExist(userId)
+        logger.debug(s"order not exist for userId[${userId}]")
+        Seq[OrderInfo]()
+      } else {
+        logger.debug(s"orderInfo: ${result}")
+        result.map(elem => JsonFormat.fromJsonString[OrderInfo](elem.toJson))
       }
-      logger.debug(s"orderInfo: ${result}")
-      result.map(elem => JsonFormat.fromJsonString[OrderInfo](elem.toJson))
     }
   }
 
