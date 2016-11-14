@@ -53,7 +53,7 @@ trait QueryOrderImpl extends AbstractOrderService with LazyLogging{
         val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
         replyPromise success QueryOrderResponse().withHeader(header)
       case error: Throwable => 
-        logger.error(s"order error: ${error}")
+        logger.error(s"query order error: ${error}")
         val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
         replyPromise success QueryOrderResponse().withHeader(header)
     }

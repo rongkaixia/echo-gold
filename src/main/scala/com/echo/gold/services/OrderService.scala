@@ -42,6 +42,8 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
       val collectionName = cfg.getString("echo.gold.mongo.order.collection")
       val orderIdColumn = cfg.getString("echo.gold.mongo.order.columns.order_id")
       val stateColumn = cfg.getString("echo.gold.mongo.order.columns.state")
+      val createAtColumn = cfg.getString("echo.gold.mongo.order.columns.create_at")
+      val updateAtColumn = cfg.getString("echo.gold.mongo.order.columns.update_at")
       val database: MongoDatabase = mongo.getDatabase(dbName)
       val collection = database.getCollection(collectionName)
 
@@ -53,7 +55,14 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
         throw new OrderServiceException.OrderNotExist(orderId)
       }
       logger.debug(s"orderInfo: ${result.head}")
-      JsonFormat.fromJsonString[OrderInfo](result.head.toJson)
+      // remove createAt and updateAt column, since JsonFormat.fromJsonString[OrderInfo]
+      // cannot parse MongoDB Extended JSON format
+      val doc = result.head
+      val createAt = doc.get(createAtColumn).get.asInt64.getValue
+      val updateAt = doc.get(updateAtColumn).get.asInt64.getValue
+      val orderInfo = JsonFormat.fromJsonString[OrderInfo]((doc - createAtColumn - updateAtColumn).toJson)
+      // append updateAt and createAt info
+      orderInfo.withCreateAt(createAt).withUpdateAt(updateAt)
     }
   }
 

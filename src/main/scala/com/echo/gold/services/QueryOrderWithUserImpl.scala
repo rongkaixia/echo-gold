@@ -28,6 +28,8 @@ trait QueryOrderWithUserImpl extends AbstractOrderService with LazyLogging{
       val collectionName = cfg.getString("echo.gold.mongo.order.collection")
       val userIdColumn = cfg.getString("echo.gold.mongo.order.columns.user_id")
       val stateColumn = cfg.getString("echo.gold.mongo.order.columns.state")
+      val createAtColumn = cfg.getString("echo.gold.mongo.order.columns.create_at")
+      val updateAtColumn = cfg.getString("echo.gold.mongo.order.columns.update_at")
       val database: MongoDatabase = mongo.getDatabase(dbName)
       val collection = database.getCollection(collectionName)
 
@@ -39,7 +41,15 @@ trait QueryOrderWithUserImpl extends AbstractOrderService with LazyLogging{
         Seq[OrderInfo]()
       } else {
         logger.debug(s"orderInfo: ${result}")
-        result.map(elem => JsonFormat.fromJsonString[OrderInfo](elem.toJson))
+        result.map(doc => {
+          // remove createAt and updateAt column, since JsonFormat.fromJsonString[OrderInfo]
+          // cannot parse MongoDB Extended JSON format
+          val createAt = doc.get(createAtColumn).get.asInt64.getValue
+          val updateAt = doc.get(updateAtColumn).get.asInt64.getValue
+          val orderInfo = JsonFormat.fromJsonString[OrderInfo]((doc - createAtColumn - updateAtColumn).toJson)
+          // append updateAt and createAt info
+          orderInfo.withCreateAt(createAt).withUpdateAt(updateAt)
+        })
       }
     }
   }
@@ -76,7 +86,7 @@ trait QueryOrderWithUserImpl extends AbstractOrderService with LazyLogging{
         val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
         replyPromise success QueryOrderWithUserResponse().withHeader(header)
       case error: Throwable => 
-        logger.error(s"order error: ${error}")
+        logger.error(s"queryOrderWithUser error: ${error}")
         val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
         replyPromise success QueryOrderWithUserResponse().withHeader(header)
     }

@@ -59,7 +59,7 @@ trait DeliverImpl extends AbstractOrderService with LazyLogging{
         val header = ResponseHeader(ResultCode.ORDER_NOT_EXISTED, x.toString)
         replyPromise success DeliverResponse().withHeader(header)
       case error: Throwable => 
-        logger.error(s"pay error: ${error}")
+        logger.error(s"deliver error: ${error}")
         val header = ResponseHeader(ResultCode.INTERNAL_SERVER_ERROR, error.toString)
         replyPromise success DeliverResponse().withHeader(header)
     }

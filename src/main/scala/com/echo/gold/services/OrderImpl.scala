@@ -1,5 +1,6 @@
 package com.echo.gold
 
+import java.time.Instant
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -62,6 +63,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
         throw new RuntimeException(s"pricing error: realPriceColumn[${realPriceColumn}] not exists")
       }
 
+      val currentTime = Instant.now.toEpochMilli
       val price = _toDouble(result.head.get(priceColumn).get)
       val realPrice = _toDouble(result.head.get(priceColumn).get)
       val discount = 0.0
@@ -86,7 +88,9 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
                 discount = discount,
                 payAmt = payAmt,
                 realPayAmt = realPayAmt,
-                state = OrderState.UNPAY)
+                state = OrderState.UNPAY,
+                createAt = currentTime,
+                updateAt = currentTime)
     }
   }
 
