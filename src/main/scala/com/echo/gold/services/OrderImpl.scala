@@ -37,7 +37,30 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
     }
   }
 
-  private def pricing(req: OrderRequest): Future[OrderInfo] = {
+  private def orderInfo2Doc(orderInfo: OrderInfo): Document = {
+    val createAtColumn = cfg.getString("echo.gold.mongo.order.columns.create_at")
+    val updateAtColumn = cfg.getString("echo.gold.mongo.order.columns.update_at")
+    val expireAtColumn = cfg.getString("echo.gold.mongo.order.columns.expire_at")
+    val payAtColumn = cfg.getString("echo.gold.mongo.order.columns.pay_at")
+    val deliverAtColumn = cfg.getString("echo.gold.mongo.order.columns.deliver_at")
+    val deliverconfirmAtColumn = cfg.getString("echo.gold.mongo.order.columns.deliver_confirm_at")
+    val refundAtColumn = cfg.getString("echo.gold.mongo.order.columns.refund_at")
+    val refundConfirmAtColumn = cfg.getString("echo.gold.mongo.order.columns.refund_confirm_at")
+    val cancelAtColumn = cfg.getString("echo.gold.mongo.order.columns.cancel_at")
+    val doc = bson.collection.mutable.Document(JsonFormat.toJsonString(orderInfo))
+    List(createAtColumn, updateAtColumn, expireAtColumn, payAtColumn, cancelAtColumn,
+         deliverAtColumn, deliverconfirmAtColumn, refundAtColumn, refundConfirmAtColumn)
+    .map(col => {
+      if (doc.contains(col)) {
+        val dt = bson.BsonDateTime(doc(col).asInt64.getValue)
+        doc -= col
+        doc += col -> dt
+      }
+    })
+    Document(doc.toBsonDocument)
+  }
+
+  private def pricing(productId: String, num: Int): Future[ProductInfo] = {
     async {
       val dbName = cfg.getString("echo.gold.mongo.product.db")
       val collectionName = cfg.getString("echo.gold.mongo.product.collection")
@@ -48,11 +71,11 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       val database: MongoDatabase = mongo.getDatabase(dbName)
       val collection = database.getCollection(collectionName)
 
-      val filterOp = equal(productIdColumn, new ObjectId(req.productId))
+      val filterOp = equal(productIdColumn, new ObjectId(productId))
       val result = await(collection.find(filterOp).first().toFuture)
       if (result.size != 1) {
-        logger.debug(s"pricing error: product not exist for productId[${req.productId}]")
-        throw new RuntimeException(s"pricing error: product not exist for productId[${req.productId}]")
+        logger.debug(s"pricing error: product not exist for productId[${productId}]")
+        throw new RuntimeException(s"pricing error: product not exist for productId[${productId}]")
       }
       if (!result.head.get(priceColumn).isDefined) {
         logger.error(s"pricing error: priceColumn[${priceColumn}] not exists")
@@ -63,34 +86,15 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
         throw new RuntimeException(s"pricing error: realPriceColumn[${realPriceColumn}] not exists")
       }
 
-      val currentTime = Instant.now.toEpochMilli
       val price = _toDouble(result.head.get(priceColumn).get)
-      val realPrice = _toDouble(result.head.get(priceColumn).get)
+      val realPrice = _toDouble(result.head.get(realPriceColumn).get)
       val discount = 0.0
-      val payAmt = realPrice * req.num
-      val realPayAmt = payAmt + discount
+      val total = realPrice + discount
       logger.debug(s"pricing result: price=${price}, realPrice=${realPrice}, discount=${discount}" + 
-                s", payAmt =${payAmt}, realPayAmt=${realPayAmt}")
+                   s", total =${total}")
 
-      OrderInfo(userId = req.userId,
-                title = req.title,
-                productId = req.productId,
-                num = req.num,
-                payMethod = req.payMethod,
-                deliverMethod = req.deliverMethod,
-                recipientsName = req.recipientsName,
-                recipientsPhone = req.recipientsPhone,
-                recipientsAddress = req.recipientsAddress,
-                recipientsPostcode = req.recipientsPostcode,
-                comment = req.comment,
-                price = price,
-                realPrice = realPrice,
-                discount = discount,
-                payAmt = payAmt,
-                realPayAmt = realPayAmt,
-                state = OrderState.UNPAY,
-                createAt = currentTime,
-                updateAt = currentTime)
+      ProductInfo(productId = productId, num = num, price = price,
+                  realPrice = realPrice, discount = discount, total = total)
     }
   }
 
@@ -101,7 +105,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       logger.debug(s"mongo database = ${dbName}, collection = ${collectionName}")
       val database: MongoDatabase = mongo.getDatabase(dbName)
       val collection = database.getCollection(collectionName)
-      val doc = Document(JsonFormat.toJsonString(orderInfo))
+      val doc = orderInfo2Doc(orderInfo)
       logger.debug(s"Document=${doc}")
       await(collection.insertOne(doc).toFuture)
     }
@@ -124,7 +128,34 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       val id = new ObjectId
 
       // pricing
-      val orderInfo = await(pricing(req)).withOrderId(id.toString)
+      val pricingFuts = req.products.map(p => {
+        pricing(p.productId, p.num)
+      })
+      val productInfos = await(Future.sequence(pricingFuts))
+
+      // TODO: 完善订单超时时间
+      // construct order info
+      val discount = 0.0
+      val payAmt = productInfos.map(_.total).sum
+      val realPayAmt = payAmt + discount
+      val currentTime = Instant.now.toEpochMilli
+      val expireAt = Instant.now.toEpochMilli
+      val orderInfo = OrderInfo(orderId = id.toString,
+                                userId = req.userId,
+                                products = productInfos,
+                                payMethod = req.payMethod,
+                                deliverMethod = req.deliverMethod,
+                                recipientsName = req.recipientsName,
+                                recipientsPhone = req.recipientsPhone,
+                                recipientsAddress = req.recipientsAddress,
+                                recipientsPostcode = req.recipientsPostcode,
+                                comment = req.comment,
+                                discount = discount,
+                                payAmt = payAmt,
+                                realPayAmt = realPayAmt,
+                                state = OrderState.UNPAY,
+                                createAt = currentTime,
+                                updateAt = currentTime)
 
       // write to db
       await(saveToMongo(orderInfo))

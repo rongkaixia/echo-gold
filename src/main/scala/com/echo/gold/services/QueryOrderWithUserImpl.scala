@@ -44,11 +44,7 @@ trait QueryOrderWithUserImpl extends AbstractOrderService with LazyLogging{
         result.map(doc => {
           // remove createAt and updateAt column, since JsonFormat.fromJsonString[OrderInfo]
           // cannot parse MongoDB Extended JSON format
-          val createAt = doc.get(createAtColumn).get.asInt64.getValue
-          val updateAt = doc.get(updateAtColumn).get.asInt64.getValue
-          val orderInfo = JsonFormat.fromJsonString[OrderInfo]((doc - createAtColumn - updateAtColumn).toJson)
-          // append updateAt and createAt info
-          orderInfo.withCreateAt(createAt).withUpdateAt(updateAt)
+          doc2OrderInfo(doc)
         })
       }
     }

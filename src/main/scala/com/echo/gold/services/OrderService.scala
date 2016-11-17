@@ -36,6 +36,32 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
   val mongo: MongoClient
   val cfg: Config
   
+  // we need this, because scalapb JsonFormat.fromJsonString[OrderInfo] cannot parse MongoDB Extended JSON format
+  def doc2OrderInfo(doc: Document): OrderInfo = {
+      val createAtColumn = cfg.getString("echo.gold.mongo.order.columns.create_at")
+      val updateAtColumn = cfg.getString("echo.gold.mongo.order.columns.update_at")
+      val expireAtColumn = cfg.getString("echo.gold.mongo.order.columns.expire_at")
+      val payAtColumn = cfg.getString("echo.gold.mongo.order.columns.pay_at")
+      val deliverAtColumn = cfg.getString("echo.gold.mongo.order.columns.deliver_at")
+      val deliverconfirmAtColumn = cfg.getString("echo.gold.mongo.order.columns.deliver_confirm_at")
+      val refundAtColumn = cfg.getString("echo.gold.mongo.order.columns.refund_at")
+      val refundConfirmAtColumn = cfg.getString("echo.gold.mongo.order.columns.refund_confirm_at")
+      val cancelAtColumn = cfg.getString("echo.gold.mongo.order.columns.cancel_at")
+      val newDoc = doc - createAtColumn - updateAtColumn - expireAtColumn - payAtColumn -
+                   deliverAtColumn - deliverconfirmAtColumn - refundAtColumn - refundConfirmAtColumn - 
+                   cancelAtColumn
+      JsonFormat.fromJsonString[OrderInfo](newDoc.toJson)
+      .withCreateAt(doc.getOrElse(createAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withUpdateAt(doc.getOrElse(updateAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withExpireAt(doc.getOrElse(expireAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withPayAt(doc.getOrElse(payAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withDeliverAt(doc.getOrElse(deliverAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withDeliverConfirmAt(doc.getOrElse(deliverconfirmAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withRefundAt(doc.getOrElse(refundAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withRefundConfirmAt(doc.getOrElse(refundConfirmAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+      .withCancelAt(doc.getOrElse(cancelAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
+  } 
+
   def queryOrderInfo(orderId: String): Future[OrderInfo] = {
     async{
       val dbName = cfg.getString("echo.gold.mongo.order.db")
@@ -58,11 +84,7 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
       // remove createAt and updateAt column, since JsonFormat.fromJsonString[OrderInfo]
       // cannot parse MongoDB Extended JSON format
       val doc = result.head
-      val createAt = doc.get(createAtColumn).get.asInt64.getValue
-      val updateAt = doc.get(updateAtColumn).get.asInt64.getValue
-      val orderInfo = JsonFormat.fromJsonString[OrderInfo]((doc - createAtColumn - updateAtColumn).toJson)
-      // append updateAt and createAt info
-      orderInfo.withCreateAt(createAt).withUpdateAt(updateAt)
+      doc2OrderInfo(doc)
     }
   }
 
