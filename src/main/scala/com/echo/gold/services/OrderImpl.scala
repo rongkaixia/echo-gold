@@ -122,6 +122,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
     logger.debug(s"recieve order request: ${req}")
     val fut = async{
       var res = OrderResponse()
+      val orderExpiresInSeconds = cfg.getInt("echo.gold.order_expires_in_seconds")
       // check request
       
       // generate order id
@@ -139,7 +140,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       val payAmt = productInfos.map(_.total).sum
       val realPayAmt = payAmt + discount
       val currentTime = Instant.now.toEpochMilli
-      val expireAt = Instant.now.toEpochMilli
+      val expireAt = Instant.now.toEpochMilli + orderExpiresInSeconds * 1000
       val orderInfo = OrderInfo(orderId = id.toString,
                                 userId = req.userId,
                                 products = productInfos,
@@ -155,7 +156,8 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
                                 realPayAmt = realPayAmt,
                                 state = OrderState.UNPAY,
                                 createAt = currentTime,
-                                updateAt = currentTime)
+                                updateAt = currentTime,
+                                expireAt = expireAt)
 
       // write to db
       await(saveToMongo(orderInfo))

@@ -50,6 +50,7 @@ trait AbstractOrderService extends OrderServiceGrpc.OrderService with LazyLoggin
       val newDoc = doc - createAtColumn - updateAtColumn - expireAtColumn - payAtColumn -
                    deliverAtColumn - deliverconfirmAtColumn - refundAtColumn - refundConfirmAtColumn - 
                    cancelAtColumn
+      logger.debug(s"doc2OrderInfo: newDoc=${newDoc}")
       JsonFormat.fromJsonString[OrderInfo](newDoc.toJson)
       .withCreateAt(doc.getOrElse(createAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
       .withUpdateAt(doc.getOrElse(updateAtColumn, new bson.BsonDateTime(0l)).asDateTime.getValue)
