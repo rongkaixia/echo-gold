@@ -20,6 +20,8 @@ import com.echo.gold.utils.LazyConfig
 import com.echo.protocol.gold._
 import com.echo.protocol.common._
 
+import java.time.Instant
+
 trait QueryOrderImpl extends AbstractOrderService with LazyLogging{
   /**
    * queryOrder interface
@@ -38,7 +40,14 @@ trait QueryOrderImpl extends AbstractOrderService with LazyLogging{
       val id = req.orderId
 
       // query
-      val orderInfo = await(queryOrderInfo(id))
+      var orderInfo = await(queryOrderInfo(id))
+
+      // cancel expired order
+      if ((orderInfo.state == OrderState.UNPAY || orderInfo.state == OrderState.PAY_ERROR) &&
+          orderInfo.expireAt <= Instant.now.toEpochMilli) {
+        await(changeState(id, orderInfo.state, OrderState.CANCELLED))
+        orderInfo = await(queryOrderInfo(id)) // re-query order info
+      }
       
       // response
       val header = ResponseHeader(ResultCode.SUCCESS, "ok")
