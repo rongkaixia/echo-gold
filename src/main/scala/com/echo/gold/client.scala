@@ -19,6 +19,7 @@ object HelloWorldClient {
   def main(args: Array[String]): Unit = {
     val client = HelloWorldClient("localhost", 50051)
     try {
+      println("==========test order, deliver and deliverConfirm=========")
       client.order()
       client.notifyy()
       client.queryOrderInfo()
@@ -28,6 +29,19 @@ object HelloWorldClient {
       client.queryOrderInfo()
 
       client.queryOrderInfoWithUser()
+
+      println("==========test cancel=========")
+      client.order()
+      client.cancel()
+      client.queryOrderInfo()
+
+      println("==========test refund and refundConfirm=========")
+      client.order()
+      client.notifyy()
+      client.refund()
+      client.queryOrderInfo()
+      client.refundConfirm()
+      client.queryOrderInfo()
     } finally {
       client.shutdown()
     }
@@ -125,6 +139,45 @@ class HelloWorldClient private(
     try {
       val response = blockingStub.deliverConfirm(request)
       logger.info("DeliverConfirmResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def cancel(): Unit = {
+    logger.info("Will try to send cancel request...")
+    val request = CancelRequest().withOrderId(orderInfo.orderId)
+    try {
+      val response = blockingStub.cancel(request)
+      logger.info("cancelResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def refund(): Unit = {
+    logger.info("Will try to send refund request...")
+    val request = RefundRequest().withOrderId(orderInfo.orderId)
+    try {
+      val response = blockingStub.refund(request)
+      logger.info("refundResponse: " + response)
+    }
+    catch {
+      case e: StatusRuntimeException =>
+        logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus)
+    }
+  }
+
+  def refundConfirm(): Unit = {
+    logger.info("Will try to send refundConfirm request...")
+    val request = RefundConfirmRequest().withOrderId(orderInfo.orderId)
+    try {
+      val response = blockingStub.refundConfirm(request)
+      logger.info("refundConfirmResponse: " + response)
     }
     catch {
       case e: StatusRuntimeException =>

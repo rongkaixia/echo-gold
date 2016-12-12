@@ -150,7 +150,10 @@ class OrderService()
   with OrderImpl 
   with NotifyImpl
   with DeliverImpl
-  with DeliverConfirmImpl{
+  with DeliverConfirmImpl
+  with RefundImpl
+  with RefundConfirmImpl
+  with CancelImpl{
 
   // execution context
   val ec = ExecutionContext.Implicits.global
