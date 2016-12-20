@@ -20,6 +20,7 @@ import org.bson.types.ObjectId
 import com.echo.gold.utils.LazyConfig
 import com.echo.protocol.gold._
 import com.echo.protocol.common._
+import com.echo.protocol.product.ProductInfo
 
 // TODO: 切换到统一批价服务器比较好，现在的架构前端跟后端的批价是分开的
 trait OrderImpl extends AbstractOrderService with LazyLogging{

@@ -5,6 +5,7 @@ import java.util.logging.{Level, Logger}
 
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 import com.echo.protocol.gold._
+import com.echo.protocol.product.ProductInfo
 
 /**
  * [[https://github.com/grpc/grpc-java/blob/v0.13.2/examples/src/main/java/io/grpc/examples/helloworld/HelloWorldClient.java]]
