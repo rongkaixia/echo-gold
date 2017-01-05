@@ -5,7 +5,7 @@ import java.util.logging.{Level, Logger}
 
 import io.grpc.{StatusRuntimeException, ManagedChannelBuilder, ManagedChannel}
 import com.echo.protocol.gold._
-import com.echo.protocol.product.ProductInfo
+import com.echo.protocol.product.ItemInfo
 
 /**
  * [[https://github.com/grpc/grpc-java/blob/v0.13.2/examples/src/main/java/io/grpc/examples/helloworld/HelloWorldClient.java]]
@@ -62,9 +62,9 @@ class HelloWorldClient private(
 
   def order(): Unit = {
     logger.info("Will try to send order request...")
-    val buyProducts = Seq(ProductInfo(productId = "5829604c69d7c76b24af9b29", num = 1))
+    val buyItems = Seq(ItemInfo(skuId = "5829604c69d7c76b24af9b29", num = 1))
     val request = OrderRequest().withUserId("12345")
-                                .withProducts(buyProducts)
+                                .withItems(buyItems)
                                 .withPayMethod(PayMethod.ONLINE)
                                 .withDeliverMethod(DeliverMethod.EXPRESS)
                                 .withRecipientsName("rk")

@@ -20,7 +20,7 @@ import org.bson.types.ObjectId
 import com.echo.gold.utils.LazyConfig
 import com.echo.protocol.gold._
 import com.echo.protocol.common._
-import com.echo.protocol.product.ProductInfo
+import com.echo.protocol.product.ItemInfo
 
 // TODO: 切换到统一批价服务器比较好，现在的架构前端跟后端的批价是分开的
 trait OrderImpl extends AbstractOrderService with LazyLogging{
@@ -61,22 +61,22 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
     Document(doc.toBsonDocument)
   }
 
-  private def pricing(productId: String, num: Int): Future[ProductInfo] = {
+  private def pricing(skuId: String, num: Int): Future[ItemInfo] = {
     async {
       val dbName = cfg.getString("echo.gold.mongo.product.db")
       val collectionName = cfg.getString("echo.gold.mongo.product.collection")
-      val productIdColumn = cfg.getString("echo.gold.mongo.product.columns.product_id")
+      val skuIdColumn = cfg.getString("echo.gold.mongo.product.columns.sku_id")
       val priceColumn = cfg.getString("echo.gold.mongo.product.columns.price")
       val realPriceColumn = cfg.getString("echo.gold.mongo.product.columns.real_price")
       logger.debug(s"mongo database = ${dbName}, collection = ${collectionName}")
       val database: MongoDatabase = mongo.getDatabase(dbName)
       val collection = database.getCollection(collectionName)
 
-      val filterOp = equal(productIdColumn, new ObjectId(productId))
+      val filterOp = equal(skuIdColumn, new ObjectId(skuId))
       val result = await(collection.find(filterOp).first().toFuture)
       if (result.size != 1) {
-        logger.debug(s"pricing error: product not exist for productId[${productId}]")
-        throw new RuntimeException(s"pricing error: product not exist for productId[${productId}]")
+        logger.debug(s"pricing error: product item not exist for skuId[${skuId}]")
+        throw new RuntimeException(s"pricing error: product item not exist for skuId[${skuId}]")
       }
       if (!result.head.get(priceColumn).isDefined) {
         logger.error(s"pricing error: priceColumn[${priceColumn}] not exists")
@@ -94,8 +94,8 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       logger.debug(s"pricing result: price=${price}, realPrice=${realPrice}, discount=${discount}" + 
                    s", total =${total}")
 
-      ProductInfo(productId = productId, num = num, price = price,
-                  realPrice = realPrice, discount = discount, total = total)
+      ItemInfo(skuId = skuId, num = num, price = price,
+              realPrice = realPrice, discount = discount, total = total)
     }
   }
 
@@ -130,21 +130,21 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       val id = new ObjectId
 
       // pricing
-      val pricingFuts = req.products.map(p => {
-        pricing(p.productId, p.num)
+      val pricingFuts = req.items.map(p => {
+        pricing(p.skuId, p.num)
       })
-      val productInfos = await(Future.sequence(pricingFuts))
+      val itemInfos = await(Future.sequence(pricingFuts))
 
       // TODO: 完善订单超时时间
       // construct order info
       val discount = 0.0
-      val payAmt = productInfos.map(_.total).sum
+      val payAmt = itemInfos.map(_.total).sum
       val realPayAmt = payAmt + discount
       val currentTime = Instant.now.toEpochMilli
       val expireAt = Instant.now.toEpochMilli + orderExpiresInSeconds * 1000
       val orderInfo = OrderInfo(orderId = id.toString,
                                 userId = req.userId,
-                                products = productInfos,
+                                items = itemInfos,
                                 payMethod = req.payMethod,
                                 deliverMethod = req.deliverMethod,
                                 recipientsName = req.recipientsName,
