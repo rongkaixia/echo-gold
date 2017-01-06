@@ -90,7 +90,7 @@ trait OrderImpl extends AbstractOrderService with LazyLogging{
       val price = _toDouble(result.head.get(priceColumn).get)
       val realPrice = _toDouble(result.head.get(realPriceColumn).get)
       val discount = 0.0
-      val total = realPrice + discount
+      val total = realPrice * num + discount
       logger.debug(s"pricing result: price=${price}, realPrice=${realPrice}, discount=${discount}" + 
                    s", total =${total}")
 
