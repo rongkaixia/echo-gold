@@ -220,26 +220,22 @@
 
                 </executions>
             </plugin>
-            <!-- <plugin>
+            <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
                 <version>0.14.2</version>
                 <configuration>
                     <images>
                         <image>
-                            <name>keystone-thunder</name>
+                            <name>echo-gold</name>
                             <build>
                                 <from>java:8</from>
                                 <entryPoint>
-                                    <exec>
-                                        <arg>java</arg>
-                                        <arg>-jar</arg>
-                                        <arg>/keystone/${project.build.finalName}.jar</arg>
-                                    </exec>
+                                    <shell>java -jar $JAVA_OPTS /workspace/${project.build.finalName}.jar</shell>
                                 </entryPoint>
                                 <assembly>
                                     <mode>dir</mode>
-                                    <basedir>/keystone</basedir>
+                                    <basedir>/workspace</basedir>
                                     <descriptorRef>artifact</descriptorRef>
                                 </assembly>
                             </build>
@@ -255,7 +251,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin> -->
+            </plugin>
         </plugins>
     </build>
 </project>
